@@ -1,0 +1,34 @@
+---
+# tasks file for monsieurbiz.haproxy
+
+- name: Configure system variables for heavy traffic in {{ monsieurbiz_haproxy_sysctl_configuration_file }}
+  become: yes
+  sysctl: name={{ item.token }} value={{ item.value }} sysctl_file={{ monsieurbiz_haproxy_sysctl_configuration_file }}
+  with_items: '{{ monsieurbiz_haproxy_system_configuration + monsieurbiz_haproxy_system_configuration_extra }}'
+  tags: [haproxy, system]
+
+- name: Configure system modules for heavy traffic
+  become: yes
+  lineinfile: path=/etc/modprobe.d/{{ monsieurbiz_haproxy_modules_options_filename }} line="options {{ item.module }} {{ item.params }}" create=yes
+  with_items: '{{ monsieurbiz_haproxy_modules_options }}'
+  tags: [haproxy, system]
+
+- name: Call sysctl -p in /etc/rc.local because several system settings are no more set after reboot
+  become: yes
+  lineinfile: path=/etc/rc.local line="/sbin/sysctl -p{{ monsieurbiz_haproxy_sysctl_configuration_file }}" insertbefore='^exit 0'
+  tags: [haproxy, system]
+
+- name: Enable the backports repository
+  become: yes
+  apt_repository: repo='deb {{ monsieurbiz_haproxy_backports_repository_url }} jessie-backports main' state=present filename='backports'
+  tags: [haproxy, install]
+
+- name: Install the latest stable release version of HaProxy
+  become: yes
+  apt: name=haproxy state=present default_release=jessie-backports
+  tags: [haproxy, install]
+
+- name: Configure HaProxy via default configuration file
+  template: src='haproxy.cfg.j2' dest='/etc/haproxy/haproxy.cfg' mode=0644 validate='haproxy -f %s -c -q'
+  notify: restart haproxy
+  tags: [haproxy, configure]

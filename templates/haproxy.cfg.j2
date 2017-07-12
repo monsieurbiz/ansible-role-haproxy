@@ -1,0 +1,152 @@
+global
+{% if monsieurbiz_haproxy.global.logs is defined %}
+{% for log in monsieurbiz_haproxy.global.logs %}
+	{{ log }}
+{% endfor %}
+{% else %}
+	log /dev/log	local0
+	log /dev/log	local1 notice
+{% endif %}
+{% if monsieurbiz_haproxy.global.chroot is defined %}
+{% if monsieurbiz_haproxy.global.chroot != '' %}
+	chroot {{ monsieurbiz_haproxy.global.chroot }}
+{% endif %}
+{% else %}
+	chroot /var/lib/haproxy
+{% endif %}
+{% if monsieurbiz_haproxy.global.stats is defined %}
+{% for stat in monsieurbiz_haproxy.global.stats %}
+	stats {{ stat }}
+{% endfor %}
+{% else %}
+	stats socket /run/haproxy/admin.sock mode 660 level admin
+	stats timeout 30s
+{% endif %}
+	user {{ monsieurbiz_haproxy.global.user|default('haproxy') }}
+	group {{ monsieurbiz_haproxy.global.group|default('haproxy') }}
+{% if monsieurbiz_haproxy.global.daemon is defined %}
+{% if monsieurbiz_haproxy.global.daemon %}
+	daemon
+{% endif %}
+{% else %}
+	daemon
+{% endif %}
+
+{% if monsieurbiz_haproxy.global.ssl is defined %}
+{% for line in monsieurbiz_haproxy.global.ssl %}
+	{{ line }}
+{% endfor %}
+{% else %}
+	# Default SSL material locations
+	ca-base /etc/ssl/certs
+	crt-base /etc/ssl/private
+
+	# Default ciphers to use on SSL-enabled listening sockets.
+	# For more information, see ciphers(1SSL). This list is from:
+	#  https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	# An alternative list with additional directives can be obtained from
+	#  https://mozilla.github.io/server-side-tls/ssl-config-generator/?server=haproxy
+	ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS
+	ssl-default-bind-options no-sslv3
+{% endif %}
+
+{% if monsieurbiz_haproxy.global.extra is defined %}
+{% for extra in monsieurbiz_haproxy.global.extra %}
+	{{ extra }}
+{% endfor %}
+{% endif %}
+
+defaults
+{% if monsieurbiz_haproxy.defaults.logs is defined %}
+{% for log in monsieurbiz_haproxy.defaults.logs %}
+	{{ log }}
+{% endfor %}
+{% else %}
+	log	global
+{% endif %}
+{% if monsieurbiz_haproxy.defaults.mode is defined and monsieurbiz_haproxy.defaults.mode != '' %}
+	mode	{{ monsieurbiz_haproxy.defaults.mode }}
+{% else %}
+	mode	http
+{% endif %}
+{% if monsieurbiz_haproxy.defaults.options is defined %}
+{% for option in monsieurbiz_haproxy.defaults.options %}
+	option {{ option }}
+{% endfor %}
+{% else %}
+	option	httplog
+	option	dontlognull
+{% endif %}
+{% if monsieurbiz_haproxy.defaults.timeouts is defined %}
+{% for timeout in monsieurbiz_haproxy.defaults.timeouts %}
+	timeout {{ timeout.key }} {{ timeout.value }}
+{% endfor %}
+{% else %}
+	timeout connect 5000
+	timeout client  50000
+	timeout server  50000
+{% endif %}
+{% if monsieurbiz_haproxy.defaults.errorfiles is defined %}
+{% for errorfile in monsieurbiz_haproxy.defaults.errorfiles %}
+	errorfile {{ errorfile }}
+{% endfor %}
+{% else %}
+	errorfile 400 /etc/haproxy/errors/400.http
+	errorfile 403 /etc/haproxy/errors/403.http
+	errorfile 408 /etc/haproxy/errors/408.http
+	errorfile 500 /etc/haproxy/errors/500.http
+	errorfile 502 /etc/haproxy/errors/502.http
+	errorfile 503 /etc/haproxy/errors/503.http
+	errorfile 504 /etc/haproxy/errors/504.http
+{% endif %}
+{% if monsieurbiz_haproxy.defaults.extra is defined %}
+{% for extra in monsieurbiz_haproxy.defaults.extra %}
+	{{ extra }}
+{% endfor %}
+{% endif %}
+
+{% if monsieurbiz_haproxy.stats is defined and monsieurbiz_haproxy.stats.enable|default(false) %}
+listen {{ monsieurbiz_haproxy.stats.name|default('stats') }}
+	stats enable
+{% if monsieurbiz_haproxy.stats.bind is defined %}
+	bind {{ monsieurbiz_haproxy.stats.bind.ip|default('') }}:{{ monsieurbiz_haproxy.stats.bind.port|default('22002') }}
+{% else %}
+	bind :22002
+{% endif %}
+{% if monsieurbiz_haproxy.stats.mode is defined %}
+	mode {{ monsieurbiz_haproxy.stats.mode }}
+{% endif %}
+{% if monsieurbiz_haproxy.stats.uri is defined %}
+	stats uri {{ monsieurbiz_haproxy.stats.uri }}
+{% endif %}
+{% if monsieurbiz_haproxy.stats.refresh is defined %}
+	stats refresh {{ monsieurbiz_haproxy.stats.refresh }}
+{% endif %}
+{% endif %}
+
+{% for frontend in monsieurbiz_haproxy.frontends %}
+frontend {{ frontend.name }}
+	bind {{ frontend.bind }}
+	default_backend {{ frontend.default_backend }}
+{% for extra in frontend.extra|default([]) %}
+	{{ extra }}
+{% endfor %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+
+{% for backend in monsieurbiz_haproxy.backends %}
+backend {{ backend.name }}
+{% if backend.servers is defined %}
+{% for server in backend.servers %}
+	server {{ server }}
+{% endfor %}
+{% endif %}
+{% for extra in backend.extra|default([]) %}
+	{{ extra }}
+{% endfor %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}

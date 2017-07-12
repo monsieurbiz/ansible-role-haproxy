@@ -1,0 +1,26 @@
+---
+# meta file for monsieurbiz.haproxy
+
+dependencies: []
+
+galaxy_info:
+  author: Michaël Thieulin
+  description: |
+    The HaProxy role allows you to install and configure the last version
+    of HaProxy for heavy traffic websites. The role also tweak some kernel
+    settings.
+  company: Monsieur Biz
+  license: MIT
+  issue_tracker_url: https://github.com/monsieurbiz/ansible-role-haproxy/issues
+  min_ansible_version: 2.3
+  github_branch: master
+  platforms:
+  - name: Debian
+    versions:
+      - jessie
+  galaxy_tags:
+    - monsieurbiz
+    - haproxy
+    - web
+    - networking
+    - cloud

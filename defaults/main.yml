@@ -1,0 +1,32 @@
+---
+# defaults file for monsieurbiz.haproxy
+
+monsieurbiz_haproxy_sysctl_configuration_file: /etc/sysctl.d/local.conf
+
+monsieurbiz_haproxy_system_configuration:
+  - { token: net.ipv4.ip_local_port_range, value: 1024 65023 } # Increase the local port range. By default (32768 61000), range is small.
+  - { token: net.ipv4.tcp_tw_recycle, value: 0 } # The tcp_tw_recycle setting MUST BE SET to 0 because we deal with clients who can share the same ip address. When recycle is enabled, the server can't distinguish new incoming connections from different clients behind the same NAT device.
+  - { token: net.ipv4.tcp_tw_reuse, value: 1 } # Set the tcp_tw_reuse setting to 1 is particularly useful in environments where numerous short connections are open and left in TIME_WAIT state, such as web servers. Reusing the sockets can be very effective in reducing server load.
+  - { token: net.ipv4.netfilter.ip_conntrack_tcp_timeout_established, value: 7875 } # If too many connections not end properly, their state is still Established for 5 days by default who lead to error "ip_conntrack: table full, dropping packet". Reduce ip_conntrack_tcp_timeout_established setting to its minimum value which is 7875 seconds (= tcp_keepalive_time + tcp_keepalive_probes * tcp_keepalive_intvl = 7200 + 9 * 75 by default). We don't want to close connection before a keep alive has been sent.
+  - { token: net.ipv4.netfilter.ip_conntrack_max, value: 5242880 } # Increase the maximum number of tracked connection to respect net.ipv4.netfilter.ip_conntrack_buckets * 4
+  - { token: net.ipv4.netfilter.ip_conntrack_tcp_timeout_fin_wait, value: 30 } # Reduce FIN_WAIT from 120 seconds to 30 seconds
+  - { token: net.ipv4.netfilter.ip_conntrack_tcp_timeout_time_wait, value: 15 } # Reduce TIME_WAIT from 120 seconds to 15 seconds
+  - { token: net.netfilter.nf_conntrack_tcp_timeout_established, value: 7875 } # If too many connections not end properly, their state is still Established for 5 days by default who lead to error "ip_conntrack: table full, dropping packet". Reduce nf_conntrack_tcp_timeout_established setting to its minimum value which is 7875 seconds (= tcp_keepalive_time + tcp_keepalive_probes * tcp_keepalive_intvl = 7200 + 9 * 75 by default). We don't want to close connection before a keep alive has been sent.
+  - { token: net.netfilter.nf_conntrack_max, value: 5242880 } # Increase the maximum number of tracked connection to respect net.ipv4.netfilter.ip_conntrack_buckets * 4
+  - { token: net.netfilter.nf_conntrack_tcp_timeout_fin_wait, value: 30 } # Reduce FIN_WAIT from 120 seconds to 30 seconds
+  - { token: net.netfilter.nf_conntrack_tcp_timeout_time_wait, value: 15 } # Reduce TIME_WAIT from 120 seconds to 15 seconds
+
+monsieurbiz_haproxy_system_configuration_extra: []
+
+monsieurbiz_haproxy_modules_options_filename: local.conf
+
+monsieurbiz_haproxy_modules_options:
+  - { module: nf_conntrack, params: 'hashsize=1310720'} # Increase by a factor of 80 the size of the hash table storing the list of conntrack entries
+
+monsieurbiz_haproxy_backports_repository_url: http://httpredir.debian.org/debian
+
+monsieurbiz_haproxy:
+  global: {}
+  defaults: {}
+  frontends: {}
+  backends: {}
